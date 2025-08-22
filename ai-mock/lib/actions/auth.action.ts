@@ -97,3 +97,38 @@ export async function setSessionCookie(idToken : string) {
         sameSite : 'lax'
     })
 }
+
+//this function returns a promise either a user is there or not ? 
+export async function getCurrentUser() : Promise<User | null> {
+    const cookieStore = await cookies();
+
+    const sessionCookie = cookieStore.get('session')?.value;
+
+    if(!sessionCookie) return null;
+
+    try{
+        const decodedClaims = await auth.verifySessionCookie(sessionCookie, true);
+
+        //we need user from database
+        const userRecord = await db.collection('users').doc(decodedClaims.uid).get();
+
+        if(!userRecord.exists) return null;
+
+        return {
+            ...userRecord.data(), 
+            id : userRecord.id
+        } as User;
+    } catch(e) {
+        console.log(e);
+
+        return null;
+    }
+}
+
+//check user is authenticated or not 
+export async function isAuthenticated() {
+
+    const user = await getCurrentUser();
+
+    return !!user; //a little trick to convert a truthy or falsy value to convert into boolean variable
+}
